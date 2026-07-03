@@ -1,4 +1,4 @@
-<title>index.html</title>
+<title>해외출장 체류비 계산기</title>
 <style>
   :root {
     --bg: #eef1f4;
@@ -317,11 +317,11 @@
     border-bottom: 1px solid var(--border);
     text-align: right;
   }
-  table.daily th:first-child, table.daily td:first-child { text-align: center; width: 56px; white-space: nowrap; }
-  table.daily th:nth-child(2), table.daily td:nth-child(2),
-  table.daily th:nth-child(3), table.daily td:nth-child(3) { text-align: left; }
+  table.daily th:nth-child(1), table.daily td:nth-child(1),
+  table.daily th:nth-child(2), table.daily td:nth-child(2) { text-align: center; width: 56px; white-space: nowrap; }
+  table.daily th:nth-child(3), table.daily td:nth-child(3),
+  table.daily th:nth-child(4), table.daily td:nth-child(4) { text-align: left; }
   table.daily input.day-toggle { width: auto; padding: 0; }
-  tr.excluded td:not(:first-child) { opacity: 0.4; text-decoration: line-through; }
   table.result th { color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
   table.result tfoot td { font-weight: 700; border-top: 2px solid var(--border-strong); border-bottom: none; }
   .tag {
@@ -523,12 +523,12 @@
     <div class="scroll">
       <table class="result daily">
         <thead>
-          <tr><th>선택</th><th>일차</th><th>날짜</th><th>숙박</th><th>식대</th><th>일비</th><th>소계 (USD)</th></tr>
+          <tr><th>숙박</th><th>식대·일비</th><th>일차</th><th>날짜</th><th>숙박</th><th>식대</th><th>일비</th><th>소계 (USD)</th></tr>
         </thead>
         <tbody id="resultBody"></tbody>
         <tfoot>
           <tr>
-            <td colspan="3">합계</td>
+            <td colspan="4">합계</td>
             <td class="mono" id="footLodging">$0.00</td>
             <td class="mono" id="footMeal">$0.00</td>
             <td class="mono" id="footPerdiem">$0.00</td>
@@ -593,7 +593,8 @@
   }
 
   let lastResult = null;
-  let excludedDays = new Set();
+  let lodgingExcluded = new Set();
+  let otherExcluded = new Set();
 
   const FLAT_RATES = {
     team_lead: { meal: 120, perdiem: 70 },
@@ -697,23 +698,25 @@
       const perdiemOverFactor = overMonth ? 0.9 : 1;
       const eduFactor = eduTrip ? 0.5 : 1;
 
-      const lodging = (isFixedLodging && !isLast) ? dailyLodging * lodgingFactor : 0;
-      const meal = dailyMeal * mealRatio;
-      const perdiem = dailyPerdiem * perdiemRatio * perdiemOverFactor * eduFactor;
+      const lodgingOff = lodgingExcluded.has(i);
+      const otherOff = otherExcluded.has(i);
+      const lodging = (isFixedLodging && !isLast && !lodgingOff) ? dailyLodging * lodgingFactor : 0;
+      const meal = otherOff ? 0 : dailyMeal * mealRatio;
+      const perdiem = otherOff ? 0 : dailyPerdiem * perdiemRatio * perdiemOverFactor * eduFactor;
       const subtotal = lodging + meal + perdiem;
-      const excluded = excludedDays.has(i);
-      if (!excluded) totalUsd += subtotal;
+      totalUsd += subtotal;
 
       const tags = [];
       if (tag) tags.push(tag);
       if (overMonth) tags.push("30일 초과");
-      if (excluded) tags.push("제외");
-      rows.push({ date, lodging, meal, perdiem, subtotal, tags, isFirst, isLast, excluded });
+      if (lodgingOff) tags.push("숙박 제외");
+      if (otherOff) tags.push("식대·일비 제외");
+      rows.push({ date, lodging, meal, perdiem, subtotal, tags, isFirst, isLast, lodgingOff, otherOff });
     }
 
-    const lodgingTotalUsd = rows.reduce((s, r) => s + (r.excluded ? 0 : r.lodging), 0) + actualLodging;
-    const mealTotalUsd = rows.reduce((s, r) => s + (r.excluded ? 0 : r.meal), 0);
-    const perdiemTotalUsd = rows.reduce((s, r) => s + (r.excluded ? 0 : r.perdiem), 0);
+    const lodgingTotalUsd = rows.reduce((s, r) => s + r.lodging, 0) + actualLodging;
+    const mealTotalUsd = rows.reduce((s, r) => s + r.meal, 0);
+    const perdiemTotalUsd = rows.reduce((s, r) => s + r.perdiem, 0);
     totalUsd += actualLodging;
 
     if (overMonthHit) {
@@ -742,17 +745,18 @@
     $("breakdownTotalKrw").textContent = won(totalKrw);
 
     $("resultBody").innerHTML = rows.map((r, i) => `
-      <tr class="${r.excluded ? "excluded" : ""}">
-        <td><input type="checkbox" class="day-toggle" data-idx="${i}" ${r.excluded ? "" : "checked"} title="이 날짜를 지급 대상에 포함할지 선택"></td>
+      <tr>
+        <td><input type="checkbox" class="lodging-toggle" data-idx="${i}" ${r.lodgingOff ? "" : "checked"} title="이 날짜 숙박비를 지급 대상에 포함할지 선택"></td>
+        <td><input type="checkbox" class="other-toggle" data-idx="${i}" ${r.otherOff ? "" : "checked"} title="이 날짜 식대·일비를 지급 대상에 포함할지 선택"></td>
         <td>${i + 1}일차${r.isFirst ? " (출국)" : ""}${r.isLast && !r.isFirst ? " (귀국)" : ""}</td>
         <td>${fmtDate(r.date)}</td>
         <td class="mono">${r.lodging ? usd(r.lodging) : "—"}</td>
-        <td class="mono">${usd(r.meal)}</td>
-        <td class="mono">${usd(r.perdiem)}</td>
+        <td class="mono">${r.meal ? usd(r.meal) : "—"}</td>
+        <td class="mono">${r.perdiem ? usd(r.perdiem) : "—"}</td>
         <td class="mono">${usd(r.subtotal)}${r.tags.map(t => `<span class="tag">${t}</span>`).join("")}</td>
       </tr>`).join("") + (actualLodging > 0 ? `
       <tr>
-        <td colspan="6">숙박비 실비 합계</td>
+        <td colspan="7">숙박비 실비 합계</td>
         <td class="mono">${usd(actualLodging)}</td>
       </tr>` : "");
     $("footLodging").textContent = usd(lodgingTotalUsd);
@@ -784,19 +788,19 @@
     lines.push(line(["기준환율 (KRW/USD)", r.fx]));
     lines.push("");
 
-    lines.push(line(["선택여부", "일차", "날짜", "숙박(USD)", "식대(USD)", "일비(USD)", "소계(USD)", "비고"]));
+    lines.push(line(["숙박선택", "식대·일비선택", "일차", "날짜", "숙박(USD)", "식대(USD)", "일비(USD)", "소계(USD)", "비고"]));
     r.rows.forEach((row, i) => {
       const label = `${i + 1}일차${row.isFirst ? " (출국)" : ""}${row.isLast && !row.isFirst ? " (귀국)" : ""}`;
       lines.push(line([
-        row.excluded ? "제외" : "선택", label, fmtDate(row.date),
+        row.lodgingOff ? "제외" : "선택", row.otherOff ? "제외" : "선택", label, fmtDate(row.date),
         round2(row.lodging), round2(row.meal), round2(row.perdiem), round2(row.subtotal),
         row.tags.join(", ")
       ]));
     });
     if (r.actualLodging > 0) {
-      lines.push(line(["", "숙박비 실비 합계", "", "", "", "", round2(r.actualLodging), ""]));
+      lines.push(line(["", "", "숙박비 실비 합계", "", "", "", "", round2(r.actualLodging), ""]));
     }
-    lines.push(line(["", "합계", "", round2(r.lodgingTotalUsd), round2(r.mealTotalUsd), round2(r.perdiemTotalUsd), round2(r.totalUsd), ""]));
+    lines.push(line(["", "", "합계", "", round2(r.lodgingTotalUsd), round2(r.mealTotalUsd), round2(r.perdiemTotalUsd), round2(r.totalUsd), ""]));
     lines.push("");
 
     lines.push(line(["구분", "USD", "KRW"]));
@@ -837,14 +841,18 @@
     }
   }
 
-  $("calcBtn").addEventListener("click", () => { excludedDays.clear(); calculate(); });
+  $("calcBtn").addEventListener("click", () => { lodgingExcluded.clear(); otherExcluded.clear(); calculate(); });
   $("rank").addEventListener("change", onRankChange);
   $("downloadBtn").addEventListener("click", copyForExcel);
   $("resultBody").addEventListener("change", (e) => {
-    if (!e.target.classList.contains("day-toggle")) return;
     const idx = parseInt(e.target.dataset.idx, 10);
-    if (e.target.checked) excludedDays.delete(idx); else excludedDays.add(idx);
-    calculate();
+    if (e.target.classList.contains("lodging-toggle")) {
+      if (e.target.checked) lodgingExcluded.delete(idx); else lodgingExcluded.add(idx);
+      calculate();
+    } else if (e.target.classList.contains("other-toggle")) {
+      if (e.target.checked) otherExcluded.delete(idx); else otherExcluded.add(idx);
+      calculate();
+    }
   });
   onRankChange();
 </script>
