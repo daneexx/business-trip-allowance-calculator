@@ -849,7 +849,15 @@
     }
   }
 
-  $("calcBtn").addEventListener("click", () => { lodgingExcluded.clear(); otherExcluded.clear(); calculate(); });
+  function todayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+  ["depDate", "arrDate", "retDepDate", "retArrDate"].forEach(id => { $(id).value = todayStr(); });
+
+  function recalcResetExclusions() { lodgingExcluded.clear(); otherExcluded.clear(); calculate(); }
+
+  $("calcBtn").addEventListener("click", recalcResetExclusions);
   $("rank").addEventListener("change", onRankChange);
   $("downloadBtn").addEventListener("click", copyForExcel);
   $("resultBody").addEventListener("change", (e) => {
@@ -862,5 +870,19 @@
       calculate();
     }
   });
+
+  $("depDate").addEventListener("change", () => { $("arrDate").value = $("depDate").value; recalcResetExclusions(); });
+  $("retDepDate").addEventListener("change", () => { $("retArrDate").value = $("retDepDate").value; recalcResetExclusions(); });
+  ["depTime", "arrDate", "arrTime", "retDepTime", "retArrDate", "retArrTime"].forEach(id => {
+    $(id).addEventListener("change", recalcResetExclusions);
+  });
+
+  ["fx", "rateA_lodging", "rateA_meal", "rateA_perdiem", "rateB_lodging", "rateB_meal", "rateB_perdiem",
+   "rateC_lodging", "rateC_meal", "rateC_perdiem", "flatMeal", "flatPerdiem", "flatLodgingActual"].forEach(id => {
+    $(id).addEventListener("input", calculate);
+  });
+  $("region").addEventListener("change", calculate);
+  $("eduTrip").addEventListener("change", calculate);
+
   onRankChange();
 </script>
