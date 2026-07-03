@@ -849,11 +849,16 @@
     }
   }
 
-  function todayStr() {
-    const d = new Date();
+  function dateStr(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   }
-  ["depDate", "arrDate", "retDepDate", "retArrDate"].forEach(id => { $(id).value = todayStr(); });
+  const todayD = new Date();
+  const tomorrowD = new Date(todayD);
+  tomorrowD.setDate(tomorrowD.getDate() + 1);
+  $("depDate").value = dateStr(todayD);
+  $("arrDate").value = dateStr(todayD);
+  $("retDepDate").value = dateStr(tomorrowD);
+  $("retArrDate").value = dateStr(tomorrowD);
 
   function recalcResetExclusions() { lodgingExcluded.clear(); otherExcluded.clear(); calculate(); }
 
