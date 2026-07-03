@@ -285,25 +285,23 @@
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 18px 28px;
-    overflow: hidden;
-  }
-  .ticket::after {
-    content: "";
-    position: absolute;
-    right: 168px;
-    top: 0;
-    bottom: 0;
-    width: 0;
-    border-left: 2px dashed rgba(255,255,255,0.35);
   }
   @media (max-width: 640px) {
     .ticket { grid-template-columns: 1fr; }
-    .ticket::after { display: none; }
+    .ticket .amountbox { border-left: none; padding-left: 0; border-top: 2px dashed rgba(255,255,255,0.35); padding-top: 16px; }
   }
   .ticket .field-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.75; }
   .ticket .route { font-size: 15px; font-weight: 700; margin-top: 2px; }
   .ticket .days { font-size: 13px; opacity: 0.85; margin-top: 8px; }
-  .ticket .amountbox { text-align: right; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+  .ticket .amountbox {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    border-left: 2px dashed rgba(255,255,255,0.35);
+    padding-left: 24px;
+  }
   .ticket .krw { font-size: 30px; font-weight: 800; font-family: ui-monospace, Consolas, monospace; letter-spacing: -0.01em; }
   .ticket .usd { font-size: 13px; opacity: 0.85; font-family: ui-monospace, Consolas, monospace; }
 
@@ -876,11 +874,8 @@
     }
   });
 
-  $("depDate").addEventListener("change", () => { $("arrDate").value = $("depDate").value; recalcResetExclusions(); });
-  $("retDepDate").addEventListener("change", () => { $("retArrDate").value = $("retDepDate").value; recalcResetExclusions(); });
-  ["depTime", "arrDate", "arrTime", "retDepTime", "retArrDate", "retArrTime"].forEach(id => {
-    $(id).addEventListener("change", recalcResetExclusions);
-  });
+  $("depDate").addEventListener("change", () => { $("arrDate").value = $("depDate").value; });
+  $("retDepDate").addEventListener("change", () => { $("retArrDate").value = $("retDepDate").value; });
 
   ["fx", "rateA_lodging", "rateA_meal", "rateA_perdiem", "rateB_lodging", "rateB_meal", "rateB_perdiem",
    "rateC_lodging", "rateC_meal", "rateC_perdiem", "flatMeal", "flatPerdiem", "flatLodgingActual"].forEach(id => {
